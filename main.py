@@ -5,7 +5,7 @@ app = FastAPI()
 # request matches the get method and "/"
 
 @app.get("/")
-async def root():
+def root():
     return {"message": "Welcome to my API- Sourav"}
 
 @app.get("/posts")
