@@ -1,17 +1,23 @@
 from gettext import find
 from mimetypes import init
 from operator import index
-from sqlite3 import Cursor
 from turtle import pos
 from typing import Optional
-from fastapi import Body, FastAPI, Response, status, HTTPException
+from fastapi import Body, FastAPI, Response, status, HTTPException, Depends
 from pydantic import BaseModel
 from random import randint, randrange
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time
+from sqlalchemy.orm import session
+from . import models
+from . database import engine, get_db
+
+
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
 
 
 class Post(BaseModel):
@@ -53,6 +59,13 @@ def find_index_post(id):
 def root():
     return {"message": "Welcome to my API- Sourav"}
 
+
+@app.get("/sqlalchemy")
+
+def test_posts(db: session = Depends(get_db)):
+    return {"status": "successful"}
+
+
 @app.get("/posts")
 
 def get_posts():
@@ -92,7 +105,6 @@ def delete_post(id: int):
     if index == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} does not exist.")
     
-    # my_posts.pop(index)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -102,13 +114,9 @@ def update_post(id:int, post:Post):
     content = %s, published = %s WHERE ID = %s RETURNING *""", (post.title,post.content,post.published,str(id)))
     index = cursor.fetchone()
     conn.commit()
-    # index = find_index_post(id)
 
     if index == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} does not exist.")
         
-    # post_dict = post.dict()
-    # post_dict["id"] = id
-    # my_posts[index] = post_dict
     return {'message': index}
 
