@@ -14,6 +14,7 @@ import time
 from sqlalchemy.orm import Session
 from . import models, schemas, utils
 from .database import engine, get_db
+from .routers import post, user, auth
 
 
 models.Base.metadata.create_all(bind=engine)
@@ -52,102 +53,10 @@ def find_index_post(id):
         if p["id"] ==id:
             return i
 
+app.include_router(post.router)
+app.include_router(user.router)
+app.include_router(auth.router)
 
 @app.get("/")
 def root():
     return {"message": "Welcome to my API- Sourav"}
-
-# GET POST
-
-@app.get("/posts", response_model=List[schemas.Post])
-def get_posts(db: Session = Depends(get_db)):
-    # cursor.execute("""SELECT * FROM POSTS""")
-    # posts = cursor.fetchall()
-    posts = db.query(models.Post).all()
-    return posts
-
-# CREATE POSTS
-
-@app.post("/posts", status_code=status.HTTP_201_CREATED, response_model=schemas.Post)
-def create_post(post: schemas.PostCreate, db: Session = Depends(get_db)):
-    # cursor.execute("""INSERT INTO POSTS (title, content, published) VALUES(%s, %s, %s)
-    # RETURNING * """
-    # ,(post.title, post.content, post.published))
-    # new_post = cursor.fetchone()
-    # conn.commit()
-    # print(post.dict())
-    new_post = models.Post(**post.dict())
-    
-    # new_post = models.Post(title=post.title, content = post.content, published = post.published)
-    db.add(new_post)
-    db.commit()
-    db.refresh(new_post)
-    return new_post
-
-# GET POST BY ID 
-
-@app.get("/posts/{id}", response_model=schemas.Post)
-
-def get_post(id: int, response: Response, db: Session = Depends(get_db)):
-    # cursor.execute("""SELECT * FROM POSTS WHERE id = %s""", (str(id),))
-    # fetched_post = cursor.fetchone()
-    # print(type(id))
-    fetched_post = db.query(models.Post).filter(models.Post.id == id).first()
-
-    if not fetched_post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                            detail= f" post with id : {id} was not found")
-    return fetched_post
-
-@app.delete("/posts/{id}", status_code = status.HTTP_204_NO_CONTENT)
-def delete_post(id: int, db: Session = Depends(get_db)):
-    # cursor.execute(
-    #     """DELETE FROM POSTS WHERE ID = %s RETURNING *""" , (str(id),))
-    # index = cursor.fetchone()
-    # conn.commit()
-    index = db.query(models.Post).filter(models.Post.id == id)
-    if index.first() == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} does not exist.")
-    
-    index.delete(synchronize_session=False)
-    db.commit()
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@app.put("/posts/{id}", response_model=schemas.Post)
-def update_post(id:int, updated_post:schemas.PostCreate,db: Session = Depends(get_db)):
-    # cursor.execute(""" UPDATE POSTS SET title = %s,
-    # content = %s, published = %s WHERE ID = %s RETURNING *""", (post.title,post.content,post.published,str(id)))
-    # index = cursor.fetchone()
-    # conn.commit()
-    post_query = db.query(models.Post).filter(models.Post.id == id)
-    index = post_query.first()
-    if index == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} does not exist.")
-
-    post_query.update(updated_post.dict(), synchronize_session=False)
-    db.commit()
-    return post_query.first()
-
-# CREATE USER
-
-@app.post("/users", status_code=status.HTTP_201_CREATED, response_model=schemas.UserOut)
-def create_users(user: schemas.UserCreate, db: Session = Depends(get_db)):
-
-    # hash the passwprd
-    hashed_password = utils.hash(user.password)
-    user.password = hashed_password
-
-    new_user = models.User(**user.dict())
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
-
-@app.get("/users/{id}", response_model=schemas.UserOut)
-def get_user(id:int, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.id == id).first()
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"user with {id} does not exist")
-    return user
