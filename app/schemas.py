@@ -1,6 +1,8 @@
 from ast import Pass
 import email
 from email.mime import base
+from lib2to3.pgen2.token import OP
+from typing import Optional
 from graphene import Int
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
@@ -37,3 +39,10 @@ class UserOut(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    id: Optional[str] = None
