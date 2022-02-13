@@ -1,4 +1,5 @@
 from sys import prefix
+from turtle import pos
 from app import oauth2
 
 from app.oauth2 import get_current_user
@@ -6,7 +7,7 @@ from .. import models, schemas
 from fastapi import Body, FastAPI,  Response, status, HTTPException, Depends, APIRouter
 from sqlalchemy.orm import Session
 from ..database import get_db
-from typing import List
+from typing import List, Optional
 from .. import oauth2
 
 router = APIRouter(
@@ -17,10 +18,11 @@ router = APIRouter(
 # GET POST
 
 @router.get("/", response_model=List[schemas.Post])
-def get_posts(db: Session = Depends(get_db),current_user: int = Depends(oauth2.get_current_user)):
+def get_posts(db: Session = Depends(get_db),current_user: int = Depends(oauth2.get_current_user), limit:int = 10, skip: int =0, search:Optional[str] = ""):
     # cursor.execute("""SELECT * FROM POSTS""")
     # posts = cursor.fetchall()
-    posts = db.query(models.Post).all()
+
+    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
     return posts
 
 # CREATE POSTS
@@ -33,7 +35,7 @@ def create_post(post: schemas.PostCreate, db: Session = Depends(get_db), current
     # new_post = cursor.fetchone()
     # conn.commit()
     # print(post.dict())
-    new_post = models.Post(**post.dict())
+    new_post = models.Post(owner_id = current_user.id, **post.dict())
     
     # new_post = models.Post(title=post.title, content = post.content, published = post.published)
     print(current_user.email)
@@ -57,17 +59,25 @@ def get_post(id: int, response: Response, db: Session = Depends(get_db),current_
                             detail= f" post with id : {id} was not found")
     return fetched_post
 
+# DELETE POST 
+
 @router.delete("/{id}", status_code = status.HTTP_204_NO_CONTENT)
 def delete_post(id: int, db: Session = Depends(get_db),current_user: int = Depends(oauth2.get_current_user)):
     # cursor.execute(
     #     """DELETE FROM POSTS WHERE ID = %s RETURNING *""" , (str(id),))
     # index = cursor.fetchone()
     # conn.commit()
-    index = db.query(models.Post).filter(models.Post.id == id)
-    if index.first() == None:
+    post_query = db.query(models.Post).filter(models.Post.id == id)
+
+    post = post_query.first()
+
+    if post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} does not exist.")
     
-    index.delete(synchronize_session=False)
+    if post.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Not authorize to perform requested action")
+
+    post_query.delete(synchronize_session=False)
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -84,6 +94,9 @@ def update_post(id:int, updated_post:schemas.PostCreate,db: Session = Depends(ge
     index = post_query.first()
     if index == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} does not exist.")
+
+    if index.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Not authorize to perform requested action")
 
     post_query.update(updated_post.dict(), synchronize_session=False)
     db.commit()
