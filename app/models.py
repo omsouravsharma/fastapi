@@ -1,4 +1,5 @@
 import email
+from email.mime import base
 from pydoc import text
 import string
 from tkinter import CASCADE
@@ -32,5 +33,13 @@ class User(Base):
     password = Column(String, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True),
                     nullable=False, server_default=text('now()'))
+
+
+
+class Votes(Base):
+    __tablename__="votes"
+    user_id = Column(Integer, ForeignKey("users.id", ondelete = CASCADE), primary_key=True, nullable=False)
+    post_id = Column(Integer, ForeignKey("posts.id",  ondelete = CASCADE), primary_key=True, nullable = False)
+
     
 
