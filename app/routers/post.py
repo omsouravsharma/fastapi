@@ -1,7 +1,5 @@
-from sys import prefix
-from turtle import pos
-from app import oauth2
 
+from app import oauth2
 from app.oauth2 import get_current_user
 from .. import models, schemas
 from fastapi import Body, FastAPI,  Response, status, HTTPException, Depends, APIRouter
@@ -9,6 +7,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from typing import List, Optional
 from .. import oauth2
+from sqlalchemy import func
 
 router = APIRouter(
     prefix="/posts", 
@@ -17,13 +16,16 @@ router = APIRouter(
 
 # GET POST
 
-@router.get("/", response_model=List[schemas.Post])
+@router.get("/", response_model=List[schemas.PostOut])
 def get_posts(db: Session = Depends(get_db),current_user: int = Depends(oauth2.get_current_user), limit:int = 10, skip: int =0, search:Optional[str] = ""):
     # cursor.execute("""SELECT * FROM POSTS""")
     # posts = cursor.fetchall()
 
     posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
-    return posts
+    results = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(models.Vote, 
+        models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).all()
+    print(results)
+    return results
 
 # CREATE POSTS
 
