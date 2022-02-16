@@ -1,10 +1,5 @@
-import email
-from email.mime import base
 from pydoc import text
-import string
 from tkinter import CASCADE
-from turtle import st
-from typing import Collection
 from .database import Base
 from sqlalchemy import  Column, ForeignKey, Integer, String, Boolean
 from sqlalchemy.sql.sqltypes import  TIMESTAMP
@@ -33,7 +28,7 @@ class User(Base):
     password = Column(String, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True),
                     nullable=False, server_default=text('now()'))
-
+    phone_number = Column(String, nullable=True)
 
 
 class Vote(Base):
