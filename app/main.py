@@ -1,8 +1,4 @@
-from distutils.command.config import config
-from telnetlib import SE
 from fastapi import  FastAPI
-from . import models, config
-from .database import engine
 from .routers import post, user, auth, vote
 from fastapi.middleware.cors import CORSMiddleware
 

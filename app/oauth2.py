@@ -1,9 +1,6 @@
-from base64 import encode
-from cmath import exp
-import imp
 from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
-from datetime import date, datetime, timedelta
+from datetime import  datetime, timedelta
 from . import schemas, database, models
 from .config import settings
 from fastapi.security import OAuth2PasswordBearer
